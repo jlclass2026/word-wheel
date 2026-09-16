@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Wheel</title>
+<style>
+  :root {
+    --bg: #f1f5f9;
+    --surface: #ffffff;
+    --primary: #4f46e5;
+    --primary-light: #e0e7ff;
+    --center-bg: #f59e0b;
+    --center-text: #ffffff;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --border: #cbd5e1;
+    --border-focus: #4f46e5;
+    --success: #16a34a;
+    --error: #dc2626;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 16px;
+  }
+
+  .app-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    max-width: 520px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--bg);
+    padding-bottom: 12px;
+  }
+
+  .header h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+  }
+
+  .sub-count-badge {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: 6px 12px;
+    border-radius: 20px;
+  }
+
+  /* Word Wheel */
+  .wheel-wrapper {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    margin: 4px 0;
+  }
+
+  .petal {
+    position: absolute;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 800;
+    transform: translate(-50%, -50%);
+    border: 2px solid #fff;
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.15);
+    user-select: none;
+  }
+
+  .center-petal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 66px;
+    height: 66px;
+    border-radius: 50%;
+    background: var(--center-bg);
+    color: var(--center-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 900;
+    border: 4px solid #fff;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+    z-index: 2;
+    user-select: none;
+  }
+
+  /* Big 9-Dash Input */
+  .dash-container {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .dash-slot {
+    flex: 1;
+    max-width: 44px;
+    height: 56px;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 1.8rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    text-transform: uppercase;
+    transition: all 0.15s ease;
+  }
+
+  .dash-slot.active {
+    border-color: var(--border-focus);
+    background: #fff;
+    box-shadow: 0 0 0 3px var(--primary-light);
+  }
+
+  #hidden-target-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Subwords Discovery Deck */
+  .subwords-deck {
+    width: 100%;
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .subwords-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 80px;
+    overflow-y: auto;
+  }
+
+  .sub-tag {
+    background: #fff;
+    border: 1px solid var(--border);
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  .sub-tag.empty {
+    color: var(--border);
+    border-style: dashed;
+    background: transparent;
+  }
+
+  /* Auxiliary Subword Input */
+  .subword-form {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .text-input {
+    flex: 1;
+    height: 48px;
+    padding: 0 16px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+    text-transform: uppercase;
+    background: #fff;
+  }
+
+  .text-input:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--primary-light);
+  }
+
+  /* Message Display */
+  .status-line {
+    min-height: 24px;
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+  }
+  .status-line.success { color: var(--success); }
+  .status-line.error { color: var(--error); }
+
+  /* Action Buttons */
+  .button-group {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+  }
+
+  button {
+    height: 48px;
+    padding: 0 20px;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 10px;
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.05s ease, background-color 0.15s ease;
+  }
+
+  button:active { transform: scale(0.98); }
+  button:hover { background: #4338ca; }
+
+  button.secondary {
+    background: var(--bg);
+    color: var(--text-muted);
+    border: 2px solid var(--border);
+  }
+  button.secondary:hover {
+    background: #e2e8f0;
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<div class="app-card" onclick="focusMainInput()">
+  <div class="header">
+    <h1>Word Wheel</h1>
+    <div class="sub-count-badge" id="sub-counter">0 / 0 Words</div>
+  </div>
+
+  <!-- Wheel Component -->
+  <div class="wheel-wrapper" id="wheel">
+    <div class="center-petal" id="center-petal">-</div>
+  </div>
+
+  <!-- Subword Log Matrix -->
+  <div class="subwords-deck">
+    <div class="subwords-grid" id="subwords-grid"></div>
+  </div>
+
+  <!-- 9-Dash Big Inputs -->
+  <div class="dash-container" id="dash-container"></div>
+  <input type="text" id="hidden-target-input" maxlength="9" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+
+  <!-- Sub-word input -->
+  <div class="subword-form" onclick="event.stopPropagation()">
+    <input type="text" class="text-input" id="subword-input" placeholder="Type a smaller word..." maxlength="8">
+    <button onclick="submitSubword()">Add Word</button>
+  </div>
+
+  <div class="status-line" id="status-line"></div>
+
+  <div class="button-group">
+    <button class="secondary" style="flex: 1;" onclick="revealWord()">Reveal</button>
+    <button style="flex: 2;" onclick="newGame()">New Puzzle</button>
+  </div>
+</div>
+
+<script>
+const NINE_WORDS = [
+  "ALLIGATOR", "ASTRONAUT", "BACKPACKS", "BEAUTIFUL", "BUTTERFLY",
+  "BREAKFAST", "CARDBOARD", "CELEBRATE", "CHALLENGE", "CHOCOLATE",
+  "CLASSROOM", "CROCODILE", "CUPCAKERS", "DANDELION", "DELICIOUS",
+  "DINOSAURS", "DOLPHINSS", "DRAGONFLY", "ELEPHANTS", "EVERYBODY",
+  "EXPLORERS", "FAVOURITE", "FIREWORKS", "FLAMINGOS", "FOOTBALLS",
+  "FORTNIGHT", "FRIENDSHIP", "GOLDFISHS", "HALLOWEEN", "HAMBURGER",
+  "HAPPINESS", "HEADPHONE", "HONEYBEES", "JELLYFISH", "KANGAROOS",
+  "LANDSCAPE", "LEMONADES", "LIGHTNING", "LUNCHBOXS", "MAGICIANS",
+  "MICROPHON", "MIDNIGHTS", "MOONLIGHT", "NOTEBOOKS", "PAINTINGS",
+  "PENGUINSS", "PINEAPPLE", "PLAYGROUND", "RAINBOWSS", "RECYCLING",
+  "SANDWICHS", "SCARECROW", "SCIENTIST", "SNOWBOARD", "SNOWFLAKE",
+  "SPACESHIP", "SPAGHETTI", "SPIDERMAN", "STARSHIPS", "STRAWBERY",
+  "SUNFLOWER", "SUNSHINES", "TELESCOPE", "TREASURES", "TURTLEDOV",
+  "UMBRELLAS", "UNDERWEAR", "UNIVERSEE", "VACATIONS", "VEGETABLE",
+  "WATERFALL", "WATERMELO", "WILDERNES", "WONDERFUL", "ZOOLOGIST"
+];
+
+const SUB_WORDS = [
+  "ABLE","ACHE","ACRE","AGED","ALLY","ALOE","ALSO","ARCH","AREA","ARMY","ARTS","AUNT","AWAY",
+  "BABY","BACK","BAIL","BAIT","BAKE","BALL","BAND","BANG","BANK","BARE","BARK","BARN","BASE",
+  "BASK","BATH","BEAK","BEAM","BEAN","BEAR","BEAT","BEEF","BEEN","BEER","BEES","BELL","BELT",
+  "BEND","BENT","BEST","BIRD","BITE","BLOW","BLUE","BLUR","BOAT","BODY","BOIL","BOLD","BOLT",
+  "BOMB","BOND","BONE","BOOK","BOOM","BOOT","BORE","BORN","BOWL","BOYS","BRAG","BRED","BREW",
+  "BULL","BUMP","BURN","BURY","BUSH","BUSY","CAFE","CAKE","CALL","CALM","CAMP","CANE","CAPE",
+  "CARD","CARE","CART","CASE","CASH","CAST","CATS","CAVE","CHEF","CHIN","CHIP","CLAP","CLAW",
+  "CLAY","CLEF","CLIP","CLUB","CLUE","COAL","COAT","COIN","COLD","COLT","COMB","CONE","COOK",
+  "COOL","COPE","CORD","CORE","CORK","CORN","COST","COSY","CRAB","CRAM","CROW","CUBE","CUBS",
+  "DAISY","DALE","DAMP","DARE","DARK","DART","DASH","DATA","DATE","DAWN","DAYS","DEAD","DEAF",
+  "DEAL","DEAR","DECK","DEED","DEEP","DEER","DESK","DIET","DIRT","DISH","DISK","DIVE","DOCK",
+  "DOGS","DOLL","DOME","DONE","DOOR","DOSE","DOVE","DOWN","DRAW","DREW","DRIP","DROP","DRUM",
+  "DUCK","DUST","DUTY","EACH","EARL","EARN","EARS","EAST","EASY","EATS","ECHO","EDGE","EGGS",
+  "ELSE","ENVY","EPIC","EVEN","EVER","EYES","FACE","FACT","FADE","FAIL","FAIR","FALL","FAME",
+  "FANG","FARM","FAST","FATE","FEAR","FEAT","FEED","FEEL","FEET","FELL","FELT","FERN","FEST",
+  "FILE","FILL","FILM","FIND","FINE","FIRE","FIRM","FISH","FIST","FLAG","FLAP","FLAT","FLEA",
+  "FLED","FLEW","FLIP","FLOW","FOAL","FOAM","FOIL","FOLD","FOLK","FOOD","FOOL","FOOT","FORD",
+  "FORK","FORM","FORT","FOUL","FOUR","FOWL","FREE","FROG","FROM","FUEL","FULL","FUND","FURS",
+  "GAME","GANG","GATE","GAVE","GAZE","GEAR","GEMS","GIFT","GIRL","GIVE","GLAD","GLOW","GLUE",
+  "GOAL","GOAT","GOLD","GOLF","GONE","GOOD","GOOSE","GRAB","GRAM","GRAY","GREW","GRID","GRIN",
+  "GRIP","GROW","GULF","GULL","HAIR","HALF","HALL","HALO","HALT","HAND","HANG","HARD","HARE",
+  "HARM","HATE","HAVE","HAWK","HAYS","HEAD","HEAL","HEAP","HEAR","HEAT","HEEL","HELD","HELM",
+  "HELP","HERB","HERD","HERO","HIDE","HIGH","HILL","HINT","HIRE","HISS","HOLD","HOLE","HOME",
+  "HOOF","HOOK","HOOP","HOPE","HORN","HOSE","HOST","HOUR","HOWL","HUGE","HULL","HUNT","HURT",
+  "HUSH","HUTS","ICED","ICON","IDEA","IDLE","INCH","INTO","IRIS","IRON","ISLE","ITEM","JARS",
+  "JAWS","JAZZ","JEAN","JEEP","JEST","JETS","JOIN","JOKE","JOLT","JUMP","JUNE","JURY","JUST",
+  "KEEN","KEEP","KELP","KEPT","KICK","KIDS","KILL","KIND","KING","KISS","KITE","KNEE","KNEW",
+  "KNIT","KNOT","KNOW","LACE","LACK","LADY","LAID","LAKE","LAMB","LAMP","LAND","LANE","LARK",
+  "LAST","LATE","LAWN","LEAD","LEAF","LEAK","LEAN","LEAP","LEFT","LEGS","LEND","LENS","LESS",
+  "LICK","LIDS","LIFE","LIFT","LIKE","LIME","LIMB","LINE","LINK","LION","LIPS","LIST","LIVE",
+  "LOAD","LOAF","LOAN","LOCK","LOGS","LONG","LOOK","LOOP","LORD","LOSE","LOSS","LOST","LOUD",
+  "LOVE","LUCK","LUSH","MADE","MAID","MAIL","MAIN","MAKE","MALE","MALL","MANE","MANY","MARE",
+  "MARK","MARS","MASH","MASK","MAST","MATE","MATH","MAZE","MEAL","MEAN","MEAT","MEET","MELT",
+  "MEND","MENU","MESS","MICE","MILD","MILE","MILK","MILL","MIND","MINE","MINT","MISS","MIST",
+  "MOAT","MOOD","MOON","MORE","MOSS","MOST","MOTH","MOVE","MUCH","MULE","MUST","NAME","NEAR",
+  "NEAT","NECK","NEED","NEST","NETS","NEWS","NEXT","NICE","NINE","NODE","NOON","NOSE","NOTE",
+  "NUTS","OAKS","OARS","OATH","OBEY","ODDS","ODOR","OILS","OKAY","ONCE","ONES","ONLY","ONTO",
+  "OPEN","ORAL","OVAL","OVEN","OVER","OWLS","PACK","PACT","PAGE","PAID","PAIL","PAIN","PAIR",
+  "PALE","PALM","PANS","PARK","PART","PASS","PAST","PATH","PAWS","PEAK","PEAL","PEAR","PEAS",
+  "PEEL","PEEP","PEER","PENS","PEST","PETS","PIGS","PILE","PILL","PINE","PINK","PINS","PINT",
+  "PIPE","PLAN","PLAY","PLEA","PLOD","PLOT","PLOW","PLUG","PLUM","PLUS","POEM","POET","POKE",
+  "POLE","POLL","POND","PONY","POOL","POOR","POPS","PORK","PORT","POSE","POST","POUR","PRAY",
+  "PUFF","PULL","PUMP","PUPY","PURE","PUSH","RACE","RACK","RAFT","RAIL","RAIN","RAKE","RAMP",
+  "RARE","RASH","RATE","RAYS","READ","REAL","REAP","REAR","REED","REEF","REST","RICE","RICH",
+  "RIDE","RING","RIPE","RISE","RISK","ROAD","ROAR","ROBE","ROCK","RODE","ROLL","ROOF","ROOK",
+  "ROOM","ROOT","ROPE","ROSE","ROSY","RUDE","RUGS","RUIN","RULE","RUSH","RUST","SAFE","SAIL",
+  "SAID","SAKE","SALE","SALT","SAME","SAND","SAVE","SAYS","SCAN","SCAR","SEAL","SEAM","SEAT",
+  "SEED","SEEK","SEEM","SEEN","SELF","SELL","SEND","SENT","SETS","SHED","SHIP","SHOE","SHOP",
+  "SHOT","SHOW","SHUT","SICK","SIDE","SIGN","SILK","SILO","SING","SINK","SIRE","SITE","SIZE",
+  "SKIN","SKIP","SKIS","SLAP","SLID","SLIM","SLIP","SLIT","SLOT","SLOW","SLUG","SNAP","SNOW",
+  "SOAP","SOAR","SOCK","SOFA","SOFT","SOIL","SOLO","SOME","SONG","SOON","SORE","SORT","SOUL",
+  "SOUP","SOUR","SPAR","SPAT","SPIN","SPIT","SPOT","SPUN","SPUR","STAR","STAY","STEM","STEP",
+  "STEW","STIR","STOP","STOW","SUCH","SUIT","SURE","SURF","SWAM","SWAN","SWAP","SWIM","TACK",
+  "TAIL","TAKE","TALE","TALK","TALL","TAME","TANK","TAPE","TASK","TAXI","TEAM","TEAR","TELL",
+  "TENT","TERM","TEST","TEXT","THAN","THAT","THEM","THEN","THEY","THIN","THIS","TICK","TIDE",
+  "TIED","TIER","TIES","TIGER","TILE","TILL","TIME","TINT","TINY","TIPS","TIRE","TOAD","TOES",
+  "TOLL","TONE","TOOK","TOOL","TOOT","TOPS","TORE","TORN","TOSS","TOUR","TOWN","TOYS","TRAP",
+  "TRAY","TREE","TREK","TRIM","TRIP","TROT","TRUE","TUBE","TUCK","TUNA","TUNE","TURF","TURN",
+  "TWIG","TWIN","TYPE","UNIT","UPON","USER","VAIN","VARY","VASE","VAST","VEIL","VEIN","VENT",
+  "VERY","VEST","VETS","VIEW","VINE","VISA","VOLE","VOLT","VOTE","WADE","WAGE","WAIT","WAKE",
+  "WALK","WALL","WAND","WANT","WARD","WARM","WARN","WASH","WASP","WAVE","WAYS","WEAK","WEAR",
+  "WEED","WEEK","WEEP","WELD","WELL","WENT","WERE","WEST","WHAT","WHEN","WHIP","WIDE","WIFE",
+  "WILD","WILL","WIND","WING","WINK","WIPE","WIRE","WISE","WISH","WITH","WOLF","WOOD","WOOL",
+  "WORD","WORE","WORK","WORM","WORN","WRAP","YARD","YARN","YEAR","YELL","YOGA","YOUR","ZERO","ZOOM"
+];
+
+let targetWord = "";
+let centerChar = "";
+let outerChars = [];
+let validSubwords = [];
+let foundSubwords = new Set();
+
+const hiddenInput = document.getElementById("hidden-target-input");
+const subwordInput = document.getElementById("subword-input");
+const dashContainer = document.getElementById("dash-container");
+const centerPetal = document.getElementById("center-petal");
+const wheelEl = document.getElementById("wheel");
+const subwordsGrid = document.getElementById("subwords-grid");
+const subCounter = document.getElementById("sub-counter");
+const statusLine = document.getElementById("status-line");
+
+function canForm(word, poolCounts, mustInclude) {
+  if (!word.includes(mustInclude)) return false;
+  const counts = {};
+  for (let ch of word) {
+    counts[ch] = (counts[ch] || 0) + 1;
+    if ((counts[ch] || 0) > (poolCounts[ch] || 0)) return false;
+  }
+  return true;
+}
+
+function solveOptimalCenter(word) {
+  const poolCounts = {};
+  for (let ch of word) poolCounts[ch] = (poolCounts[ch] || 0) + 1;
+  const uniqueChars = [...new Set(word)];
+
+  let bestChar = uniqueChars[0];
+  let bestList = [];
+
+  uniqueChars.forEach(char => {
+    const list = SUB_WORDS.filter(w => w.length >= 4 && w.length < 9 && canForm(w, poolCounts, char));
+    if (list.length > bestList.length) {
+      bestList = list;
+      bestChar = char;
+    }
+  });
+
+  return { bestChar, list: bestList };
+}
+
+function initDashes() {
+  dashContainer.innerHTML = "";
+  for (let i = 0; i < 9; i++) {
+    const slot = document.createElement("div");
+    slot.className = "dash-slot";
+    dashContainer.appendChild(slot);
+  }
+}
+
+function renderWheel() {
+  document.querySelectorAll(".petal").forEach(el => el.remove());
+  centerPetal.textContent = centerChar;
+
+  const radius = 88;
+  const centerCoord = 130;
+
+  outerChars.forEach((ch, i) => {
+    const angle = (i * (360 / 8)) * (Math.PI / 180);
+    const x = centerCoord + radius * Math.cos(angle);
+    const y = centerCoord + radius * Math.sin(angle);
+
+    const petal = document.createElement("div");
+    petal.className = "petal";
+    petal.textContent = ch;
+    petal.style.left = `${x}px`;
+    petal.style.top = `${y}px`;
+    wheelEl.appendChild(petal);
+  });
+
+  renderSubGrid();
+}
+
+function renderSubGrid() {
+  subwordsGrid.innerHTML = "";
+  subCounter.textContent = `${foundSubwords.size} / ${validSubwords.length} Words`;
+
+  validSubwords.forEach(word => {
+    const tag = document.createElement("div");
+    if (foundSubwords.has(word)) {
+      tag.className = "sub-tag";
+      tag.textContent = word;
+    } else {
+      tag.className = "sub-tag empty";
+      tag.textContent = "•".repeat(word.length);
+    }
+    subwordsGrid.appendChild(tag);
+  });
+}
+
+function updateDashes() {
+  const val = hiddenInput.value.toUpperCase();
+  const slots = document.querySelectorAll(".dash-slot");
+  slots.forEach((slot, idx) => {
+    slot.textContent = val[idx] || "";
+    slot.classList.toggle("active", idx === val.length);
+  });
+
+  if (val.length === 9) {
+    if (val === targetWord) {
+      setStatus("Correct! You found the 9-letter word!", "success");
+    } else {
+      setStatus("Not quite, try another arrangement!", "error");
+    }
+  } else {
+    setStatus("", "");
+  }
+}
+
+function submitSubword() {
+  const val = subwordInput.value.trim().toUpperCase();
+  subwordInput.value = "";
+  if (!val) return;
+
+  if (val.length < 4) {
+    setStatus("Words must be at least 4 letters long.", "error");
+    return;
+  }
+  if (!val.includes(centerChar)) {
+    setStatus(`Must include the middle letter (${centerChar})!`, "error");
+    return;
+  }
+  if (foundSubwords.has(val)) {
+    setStatus("You already found that word!", "error");
+    return;
+  }
+
+  if (validSubwords.includes(val)) {
+    foundSubwords.add(val);
+    renderSubGrid();
+    setStatus(`Great job! Found: ${val}`, "success");
+  } else {
+    setStatus("Word not found in the puzzle list.", "error");
+  }
+}
+
+subwordInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") submitSubword();
+});
+
+function setStatus(msg, type) {
+  statusLine.textContent = msg;
+  statusLine.className = `status-line ${type}`;
+}
+
+function revealWord() {
+  hiddenInput.value = targetWord;
+  updateDashes();
+  validSubwords.forEach(w => foundSubwords.add(w));
+  renderSubGrid();
+  setStatus(`The 9-letter word was: ${targetWord}`, "success");
+}
+
+function focusMainInput() {
+  hiddenInput.focus();
+}
+
+function newGame() {
+  targetWord = NINE_WORDS[Math.floor(Math.random() * NINE_WORDS.length)];
+  const { bestChar, list } = solveOptimalCenter(targetWord);
+  centerChar = bestChar;
+  validSubwords = list.sort((a, b) => a.length - b.length || a.localeCompare(b));
+  foundSubwords.clear();
+
+  let pool = targetWord.split("");
+  pool.splice(pool.indexOf(centerChar), 1);
+  outerChars = pool.sort(() => Math.random() - 0.5);
+
+  hiddenInput.value = "";
+  initDashes();
+  renderWheel();
+  setStatus("", "");
+  focusMainInput();
+}
+
+hiddenInput.addEventListener("input", updateDashes);
+document.addEventListener("keydown", () => {
+  if (document.activeElement !== subwordInput) focusMainInput();
+});
+
+newGame();
+</script>
+</body>
+</html>
